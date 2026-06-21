@@ -44,7 +44,7 @@ class SessionService extends ChangeNotifier {
     await _save();
     notifyListeners();
     
-    // Sync to Supabase in background
+    // Sync to Supabase - MUST complete before students can scan
     try {
       await _supabase.from('sessions').insert({
         'id': s.id,
@@ -57,10 +57,16 @@ class SessionService extends ChangeNotifier {
         'timer_minutes': s.timerMinutes,
         'created_at': s.createdAt,
       });
+    } on PostgrestException catch (e) {
+      if (kDebugMode) {
+        print('Error syncing session to Supabase: ${e.message}');
+      }
+      throw Exception('Failed to create session on server: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Error syncing session to Supabase: $e');
       }
+      throw Exception('Failed to create session on server: $e');
     }
   }
 
@@ -71,7 +77,7 @@ class SessionService extends ChangeNotifier {
       await _save();
       notifyListeners();
       
-      // Sync to Supabase in background
+      // Sync to Supabase - wait for completion
       try {
         await _supabase.from('sessions').update({
           'name': s.name,
@@ -82,10 +88,16 @@ class SessionService extends ChangeNotifier {
           'qr_url': s.url,
           'timer_minutes': s.timerMinutes,
         }).eq('id', s.id);
+      } on PostgrestException catch (e) {
+        if (kDebugMode) {
+          print('Error updating session in Supabase: ${e.message}');
+        }
+        throw Exception('Failed to update session on server: ${e.message}');
       } catch (e) {
         if (kDebugMode) {
           print('Error updating session in Supabase: $e');
         }
+        throw Exception('Failed to update session on server: $e');
       }
     }
   }
@@ -95,13 +107,19 @@ class SessionService extends ChangeNotifier {
     await _save();
     notifyListeners();
     
-    // Sync to Supabase in background
+    // Sync to Supabase - wait for completion
     try {
       await _supabase.from('sessions').delete().eq('id', id);
+    } on PostgrestException catch (e) {
+      if (kDebugMode) {
+        print('Error deleting session from Supabase: ${e.message}');
+      }
+      throw Exception('Failed to delete session from server: ${e.message}');
     } catch (e) {
       if (kDebugMode) {
         print('Error deleting session from Supabase: $e');
       }
+      throw Exception('Failed to delete session from server: $e');
     }
   }
 

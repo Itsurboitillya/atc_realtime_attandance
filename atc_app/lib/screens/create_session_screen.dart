@@ -97,11 +97,23 @@ class _CreateSessionScreenState extends State<CreateSessionScreen> {
                       url: _data['url'] as String,
                       timerMinutes: int.tryParse(_data['timerMinutes'] as String) ?? 0,
                     );
-                    await svc.add(session);
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => SessionQrScreen(session: session)),
-                    );
+                    try {
+                      await svc.add(session);
+                      if (!mounted) return;
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => SessionQrScreen(session: session)),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error creating session: $e'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   } else {
                     s.name = _data['name'] as String;
                     s.numberOfStudents = int.tryParse(_data['numberOfStudents'] as String) ?? 0;
@@ -110,8 +122,20 @@ class _CreateSessionScreenState extends State<CreateSessionScreen> {
                     s.moduleName = _data['moduleName'] as String;
                     s.url = _data['url'] as String;
                     s.timerMinutes = int.tryParse(_data['timerMinutes'] as String) ?? 0;
-                    await svc.update(s);
-                    Navigator.pop(context);
+                    try {
+                      await svc.update(s);
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating session: $e'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   }
                 },
                 child: Text(widget.editSession == null ? 'Create & Show QR' : 'Save changes'),
