@@ -1,0 +1,58 @@
+-- Supabase SQL setup for ATC App
+-- This file creates the required tables and policies for teacher/student attendance.
+
+-- 1. Enable the pgcrypto extension for UUID generation.
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 2. Sessions table
+CREATE TABLE IF NOT EXISTS sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  module_name TEXT,
+  qr_url TEXT,
+  date TEXT,
+  level TEXT,
+  timer_minutes INTEGER,
+  number_of_students INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_level ON sessions(level);
+CREATE INDEX IF NOT EXISTS idx_sessions_module_name ON sessions(module_name);
+
+-- 3. Attendance records table
+CREATE TABLE IF NOT EXISTS attendance_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL,
+  student_name TEXT NOT NULL,
+  admission_number TEXT NOT NULL,
+  module_name TEXT,
+  timestamp TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  , CONSTRAINT attendance_records_session_id_fkey FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_session_id ON attendance_records(session_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_admission_number ON attendance_records(admission_number);
+CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance_records(timestamp);
+
+-- 4. Disable row-level security on tables
+ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_records DISABLE ROW LEVEL SECURITY;
+
+-- 5. Grant authenticated permissions for CRUD operations
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE sessions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE attendance_records TO authenticated;
+
+-- 6. If your app uses anon access for some requests, grant anon as well
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE sessions TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE attendance_records TO anon;
+
+-- 7. Notes
+-- With RLS disabled, Supabase will not enforce row-level restrictions.
+-- App-side role checks are still recommended if you need teacher/student separation.
+
+-- 8. Example query to verify table contents
+-- SELECT * FROM sessions LIMIT 10;
+-- SELECT * FROM attendance_records LIMIT 10;

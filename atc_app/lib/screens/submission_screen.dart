@@ -53,34 +53,68 @@ class _SubmissionScreenState extends State<SubmissionScreen> {
                     ? null
                     : () async {
                         if (!(_formKey.currentState?.validate() ?? false)) return;
+                        if (sessionId.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Unable to identify the session. Please try again.'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
                         _formKey.currentState?.save();
                         setState(() => _isSaving = true);
                         final studentService = Provider.of<StudentService>(context, listen: false);
-                        await studentService.addAttendance(
-                          sessionId: sessionId,
-                          studentName: _name,
-                          admissionNumber: _admission,
-                          moduleName: moduleName,
-                        );
-                        if (!mounted) return;
-                        setState(() => _isSaving = false);
-                        showDialog<void>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Attendance Recorded'),
-                            content: const Text('Your attendance has been recorded successfully.'),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context)
-                                    ..pop()
-                                    ..pop();
-                                },
-                                child: const Text('OK'),
+                        try {
+                          await studentService.addAttendance(
+                            sessionId: sessionId,
+                            studentName: _name,
+                            admissionNumber: _admission,
+                            moduleName: moduleName,
+                          );
+                          if (!mounted) return;
+                          setState(() => _isSaving = false);
+                          showDialog<void>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('Attendance Recorded'),
+                              content: const Text('Your attendance has been recorded successfully.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context)
+                                      ..pop()
+                                      ..pop();
+                                  },
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() => _isSaving = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.error_outline, color: Colors.white),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      e.toString(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
                       },
                 child: _isSaving ? const CircularProgressIndicator() : const Text('Submit Attendance'),
               ),

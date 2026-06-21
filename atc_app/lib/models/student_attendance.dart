@@ -15,15 +15,23 @@ class StudentAttendance {
     required this.moduleName,
   });
 
-  factory StudentAttendance.fromJson(Map<String, dynamic> j) =>
-      StudentAttendance(
-        id: j['id'] as String,
-        sessionId: j['sessionId'] as String,
-        studentName: j['studentName'] as String,
-        admissionNumber: j['admissionNumber'] as String,
-        timestamp: j['timestamp'] as String,
-        moduleName: j['moduleName'] as String,
-      );
+  factory StudentAttendance.fromJson(Map<String, dynamic> j) {
+    String readString(String camel, String snake) {
+      final value = j[camel] ?? j[snake];
+      if (value is String) return value;
+      if (value != null) return value.toString();
+      return '';
+    }
+
+    return StudentAttendance(
+      id: readString('id', 'id'),
+      sessionId: readString('sessionId', 'session_id'),
+      studentName: readString('studentName', 'student_name'),
+      admissionNumber: readString('admissionNumber', 'admission_number'),
+      timestamp: readString('timestamp', 'timestamp'),
+      moduleName: readString('moduleName', 'module_name'),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -32,5 +40,14 @@ class StudentAttendance {
         'admissionNumber': admissionNumber,
         'timestamp': timestamp,
         'moduleName': moduleName,
+      };
+
+  Map<String, dynamic> toSupabaseJson() => {
+        'id': id,
+        'session_id': sessionId,
+        'student_name': studentName,
+        'admission_number': admissionNumber,
+        'module_name': moduleName,
+        'timestamp': timestamp,
       };
 }

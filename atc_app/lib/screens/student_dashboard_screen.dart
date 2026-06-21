@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/supabase_connection_indicator.dart';
 import 'scan_screen.dart';
 import 'student_history_screen.dart';
 import 'account_screen.dart';
@@ -9,7 +10,17 @@ class StudentDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Dashboard')),
+      appBar: AppBar(
+        title: const Text('Student Dashboard'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: SupabaseConnectionIndicator(showLabel: true),
+            ),
+          ),
+        ],
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),

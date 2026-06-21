@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/supabase_connection_indicator.dart';
 import 'session_list_screen.dart';
 import 'account_screen.dart';
 
@@ -17,7 +18,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final pages = [const SessionListScreen(), const AccountScreen()];
     return Scaffold(
-      appBar: AppBar(title: const Text('Teacher Dashboard')),
+      appBar: AppBar(
+        title: const Text('Teacher Dashboard'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: SupabaseConnectionIndicator(showLabel: true),
+            ),
+          ),
+        ],
+      ),
       body: pages[_index],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,

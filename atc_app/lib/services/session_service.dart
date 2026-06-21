@@ -2,14 +2,16 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../models/session.dart';
+import '../models/session.dart' as session_model;
 
 class SessionService extends ChangeNotifier {
   static const _kStorageKey = 'attendance_sessions_v1';
-  List<Session> _sessions = [];
+  List<session_model.Session> _sessions = [];
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  List<Session> get sessions => List.unmodifiable(_sessions);
+  List<session_model.Session> get sessions => List.unmodifiable(_sessions);
 
   SessionService() {
     _load();
@@ -22,7 +24,7 @@ class SessionService extends ChangeNotifier {
       try {
         final list = jsonDecode(raw) as List<dynamic>;
         _sessions = list
-            .map((e) => Session.fromJson(Map<String, dynamic>.from(e)))
+            .map((e) => session_model.Session.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       } catch (_) {
         _sessions = [];
@@ -37,18 +39,54 @@ class SessionService extends ChangeNotifier {
     await prefs.setString(_kStorageKey, raw);
   }
 
-  Future<void> add(Session s) async {
+  Future<void> add(session_model.Session s) async {
     _sessions.insert(0, s);
     await _save();
     notifyListeners();
+    
+    // Sync to Supabase in background
+    try {
+      await _supabase.from('sessions').insert({
+        'id': s.id,
+        'name': s.name,
+        'number_of_students': s.numberOfStudents,
+        'date': s.date,
+        'level': s.level,
+        'module_name': s.moduleName,
+        'qr_url': s.url,
+        'timer_minutes': s.timerMinutes,
+        'created_at': s.createdAt,
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error syncing session to Supabase: $e');
+      }
+    }
   }
 
-  Future<void> update(Session s) async {
+  Future<void> update(session_model.Session s) async {
     final idx = _sessions.indexWhere((e) => e.id == s.id);
     if (idx != -1) {
       _sessions[idx] = s;
       await _save();
       notifyListeners();
+      
+      // Sync to Supabase in background
+      try {
+        await _supabase.from('sessions').update({
+          'name': s.name,
+          'number_of_students': s.numberOfStudents,
+          'date': s.date,
+          'level': s.level,
+          'module_name': s.moduleName,
+          'qr_url': s.url,
+          'timer_minutes': s.timerMinutes,
+        }).eq('id', s.id);
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error updating session in Supabase: $e');
+        }
+      }
     }
   }
 
@@ -56,9 +94,18 @@ class SessionService extends ChangeNotifier {
     _sessions.removeWhere((e) => e.id == id);
     await _save();
     notifyListeners();
+    
+    // Sync to Supabase in background
+    try {
+      await _supabase.from('sessions').delete().eq('id', id);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting session from Supabase: $e');
+      }
+    }
   }
 
-  Session? byId(String id) {
+  session_model.Session? byId(String id) {
     try {
       return _sessions.firstWhere((e) => e.id == id);
     } catch (_) {

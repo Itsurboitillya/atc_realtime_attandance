@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/student_attendance.dart';
 
 class StudentService extends ChangeNotifier {
   static const _kKey = 'student_attendance_v1';
   List<StudentAttendance> _entries = [];
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   StudentService() {
     _load();
@@ -53,7 +55,42 @@ class StudentService extends ChangeNotifier {
     _entries.insert(0, entry);
     await _save();
     notifyListeners();
+
+    try {
+      await _supabase.from('attendance_records').insert(entry.toSupabaseJson());
+    } on PostgrestException catch (e) {
+      if (kDebugMode) {
+        print('Error syncing to Supabase: ${e.message}');
+      }
+      throw Exception('Failed to capture attendance: ${e.message}');
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error syncing to Supabase: $e');
+      }
+      throw Exception('Failed to capture attendance: $e');
+    }
+
     return entry;
+  }
+
+  Future<List<StudentAttendance>> fetchAttendanceForSession(String sessionId) async {
+    try {
+      final response = await _supabase
+          .from('attendance_records')
+          .select()
+          .eq('session_id', sessionId);
+      if (response is List) {
+        final records = response
+            .map((e) => StudentAttendance.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        return records;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading attendance from Supabase: $e');
+      }
+    }
+    return forSession(sessionId);
   }
 
   List<StudentAttendance> forSession(String sessionId) =>
